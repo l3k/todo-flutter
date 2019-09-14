@@ -16,7 +16,32 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  final _toDoController = TextEditingController();
+
   List _toDoList = [];
+
+
+  @override
+  void initState() {
+    super.initState();
+
+    _readData().then((data) {
+      setState(() {
+        _toDoList = json.decode(data);
+      });
+    });
+  }
+
+  void _addToDo() {
+    setState(() {
+      Map<String, dynamic> newToDo = Map();
+      newToDo["title"] = _toDoController.text;
+      _toDoController.text = "";
+      newToDo["ok"] = false;
+      _toDoList.add(newToDo);
+      _saveData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,23 +59,61 @@ class _HomeState extends State<Home> {
               children: <Widget>[
                 Expanded(
                     child: TextField(
-                      decoration: InputDecoration(
-                        labelText: "Nova Tarefa",
-                        labelStyle: TextStyle(color: Colors.blueAccent)),
+                  controller: _toDoController,
+                  decoration: InputDecoration(
+                      labelText: "Nova Tarefa",
+                      labelStyle: TextStyle(color: Colors.blueAccent)),
                 )),
                 RaisedButton(
                   color: Colors.blueAccent,
                   child: Icon(Icons.add),
                   textColor: Colors.white,
-                  onPressed: () {},
+                  onPressed: _addToDo,
                 )
               ],
             ),
+          ),
+          Expanded(
+            child: ListView.builder(
+                padding: EdgeInsets.only(top: 10.0),
+                itemCount: _toDoList.length,
+                itemBuilder: buildItem),
           )
         ],
       ),
     );
   }
+
+  Widget buildItem(context, index) {
+    return Dismissible(
+      key: Key(DateTime.now().millisecondsSinceEpoch.toString()),
+      background: Container(
+        color: Colors.red,
+        child: Align(
+          alignment: Alignment(-0.9, 0.0),
+          child: Icon(Icons.delete, color: Colors.white,),
+        ),
+      ),
+      direction: DismissDirection.startToEnd,
+      child: CheckboxListTile(
+        title: Text(_toDoList[index]["title"]),
+        value: _toDoList[index]["ok"],
+        secondary: CircleAvatar(
+          child: Icon(
+              _toDoList[index]["ok"] ? Icons.check : Icons.error
+          ),
+        ),
+        onChanged: (c){
+          setState(() {
+            _toDoList[index]["ok"] = c;
+            _saveData();
+          });
+        },
+      ),
+    );
+  }
+
+  /**/
 
   Future<File> _getFile() async {
     final directory = await getApplicationDocumentsDirectory();
@@ -64,7 +127,7 @@ class _HomeState extends State<Home> {
     return file.writeAsString(data);
   }
 
-  Future<String> _readerData() async {
+  Future<String> _readData() async {
     try {
       final file = await _getFile();
 
